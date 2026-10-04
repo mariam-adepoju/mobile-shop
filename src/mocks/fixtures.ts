@@ -67,6 +67,22 @@ export const healthResponse = {
 };
 
 /**
+ * `GET /me` (PRD 4.1, MFR-9).
+ *
+ * Fake PII only. This exists so the Account screen can be developed before the
+ * Tier 1 slice is deployed; it is never a real user's data (AGENTS.md 14).
+ */
+export const meResponse = {
+  data: {
+    id: 'usr_demo_001',
+    email: 'demo.user@example.com',
+    name: 'Demo User',
+    phone: null,
+    auth0Sub: 'google-oauth2|000000000000000000',
+  },
+};
+
+/**
  * Product fixtures (PRD 4.1 `GET /catalog/products`).
  *
  * Deliberately covers every `purchaseState` so MFR-5 is exercisable in mock

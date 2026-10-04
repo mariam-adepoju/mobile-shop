@@ -69,6 +69,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         imageWidth: 76,
       },
     ],
+    // Registers the Auth0 redirect scheme in AndroidManifest (Android) and in
+    // Info.plist/CFBundleURLTypes (iOS). Without this, the browser redirect back
+    // into the app never arrives and PKCE cannot complete. The SDK builds the
+    // callback as `${bundleId}.auth0://<domain>/{ios|android}/${bundleId}/callback`,
+    // so the plugin must stay in step with the URLs allowed in Auth0 (AGENTS.md 8).
+    'react-native-auth0',
   ],
   experiments: {
     typedRoutes: true,

@@ -28,8 +28,13 @@ interface AppTextProps {
   numberOfLines?: number;
   /**
    * Announced role; defaults to a heading for semibold text.
+   *
+   * `alert` is a live-region role: use it for a message that appears without the
+   * user asking for it, such as a sign-in failure (AGENTS.md 10).
    */
-  accessibilityRole?: 'header' | 'text' | 'link';
+  accessibilityRole?: 'header' | 'text' | 'link' | 'alert';
+  /** Stable hook for tests and for `getByText`-style queries. */
+  testID?: string;
 }
 
 /**
@@ -44,6 +49,7 @@ export function AppText({
   style,
   numberOfLines,
   accessibilityRole,
+  testID,
 }: AppTextProps) {
   return (
     <Text
@@ -51,6 +57,7 @@ export function AppText({
       allowFontScaling
       accessibilityRole={accessibilityRole ?? (weight === 'semibold' ? 'header' : 'text')}
       numberOfLines={numberOfLines}
+      testID={testID}
       style={[
         {
           color,

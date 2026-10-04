@@ -9,5 +9,9 @@ import { background } from '@/theme';
  * wired up, and so the session guard has a destination to route to.
  */
 export default function AuthLayout() {
-  return <Stack screenOptions={{ contentStyle: { backgroundColor: background } }} />;
+  return (
+    <Stack screenOptions={{ contentStyle: { backgroundColor: background } }}>
+      <Stack.Screen name="sign-in" options={{ headerShown: false }} />
+    </Stack>
+  );
 }

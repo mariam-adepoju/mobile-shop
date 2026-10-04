@@ -7,6 +7,7 @@ import {
   departmentsResponse,
   findProductFixture,
   healthResponse,
+  meResponse,
   productsResponse,
 } from './fixtures';
 
@@ -22,6 +23,7 @@ const ROUTES: readonly {
   readonly body: unknown;
 }[] = [
   { match: /\/health$/, status: 200, body: healthResponse },
+  { match: /\/me$/, status: 200, body: meResponse },
   { match: /\/catalog\/departments$/, status: 200, body: departmentsResponse },
   { match: CATEGORIES_ROUTE, status: 200, body: categoriesResponse },
   { match: PRODUCTS_ROUTE, status: 200, body: productsResponse },
