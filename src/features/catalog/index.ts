@@ -16,6 +16,7 @@ export {
   ProductSummarySchema,
   PurchaseStateSchema,
   isPurchasable,
+  hasMorePages,
   isUnfiltered,
   type Category,
   type Department,

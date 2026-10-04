@@ -219,11 +219,15 @@ const productDetails: Record<string, unknown> = {
   },
 };
 
-/** Exported so the mock transport can serve a page for any fixture product. */
+/**
+ * Source list of fixture products (PRD 4.1 `GET /catalog/products`).
+ *
+ * The mock transport slices this into `{ items, page, limit, totalItems,
+ * totalPages }` per request, so the wire envelope matches the real backend.
+ */
 export const productsResponse = {
   data: {
     products: products.map((product) => ({ ...product })),
-    nextCursor: null,
   },
 };
 

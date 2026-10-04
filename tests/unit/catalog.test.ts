@@ -2,13 +2,13 @@ import { createMockFetch, departmentsResponse } from '@/mocks';
 import {
   CategoryListSchema,
   DepartmentListSchema,
-  PRODUCTS_PAGE_SIZE,
   ProductDetailSchema,
   ProductPageSchema,
   ProductSummarySchema,
   PurchaseStateSchema,
   departmentsKey,
   fetchDepartments,
+  hasMorePages,
   isPurchasable,
   isUnfiltered,
 } from '@/features/catalog';
@@ -168,33 +168,72 @@ describe('product schemas', () => {
   });
 });
 
-describe('product pagination', () => {
-  it('passes a cursor page through unchanged', () => {
-    const parsed = ProductPageSchema.safeParse({ products: [baseProduct], nextCursor: 'abc' });
-    expect(parsed.success).toBe(true);
-    if (parsed.success) expect(parsed.data.nextCursor).toBe('abc');
+describe('product pagination (page-number envelope)', () => {
+  const page = (
+    over: Partial<{
+      items: unknown[];
+      page: number;
+      limit: number;
+      totalItems: number;
+      totalPages: number;
+    }> = {},
+  ) => ({
+    items: [baseProduct],
+    page: 1,
+    limit: 20,
+    totalItems: 1,
+    totalPages: 1,
+    ...over,
   });
 
-  it('treats a missing cursor as no further pages', () => {
-    const parsed = ProductPageSchema.safeParse({ products: [baseProduct] });
+  it('accepts the pinned { items, page, limit, totalItems, totalPages } shape', () => {
+    const parsed = ProductPageSchema.safeParse(page());
     expect(parsed.success).toBe(true);
-    if (parsed.success) expect(parsed.data.nextCursor).toBeNull();
+    if (parsed.success) {
+      expect(parsed.data.items).toHaveLength(1);
+      expect(parsed.data.page).toBe(1);
+      expect(parsed.data.totalPages).toBe(1);
+    }
   });
 
-  it('treats a short bare array as the end of the list', () => {
+  it('rejects the old cursor envelope so a stale contract cannot pass silently', () => {
+    expect(
+      ProductPageSchema.safeParse({ products: [baseProduct], nextCursor: 'abc' }).success,
+    ).toBe(false);
+  });
+
+  it('rejects a page below 1', () => {
+    expect(ProductPageSchema.safeParse(page({ page: 0 })).success).toBe(false);
+  });
+
+  it('still tolerates a bare array, reporting a single page', () => {
     const parsed = ProductPageSchema.safeParse([baseProduct]);
     expect(parsed.success).toBe(true);
-    if (parsed.success) expect(parsed.data.nextCursor).toBeNull();
+    if (parsed.success) {
+      expect(parsed.data.items).toHaveLength(1);
+      expect(parsed.data.totalPages).toBe(1);
+    }
+  });
+});
+
+describe('hasMorePages (MFR-3)', () => {
+  // Only page/totalPages drive the decision; items just satisfy the shape.
+  const withPages = (current: number, total: number) => ({
+    items: [baseProduct],
+    page: current,
+    limit: 20,
+    totalItems: 0,
+    totalPages: total,
   });
 
-  it('treats a full bare page as possibly having more', () => {
-    const full = Array.from({ length: PRODUCTS_PAGE_SIZE }, (_, i) => ({
-      ...baseProduct,
-      id: `p${i}`,
-    }));
-    const parsed = ProductPageSchema.safeParse(full);
-    expect(parsed.success).toBe(true);
-    if (parsed.success) expect(parsed.data.nextCursor).not.toBeNull();
+  it('is true while page < totalPages', () => {
+    expect(hasMorePages(withPages(1, 3))).toBe(true);
+    expect(hasMorePages(withPages(2, 3))).toBe(true);
+  });
+
+  it('is false on the last page and beyond', () => {
+    expect(hasMorePages(withPages(3, 3))).toBe(false);
+    expect(hasMorePages(withPages(1, 1))).toBe(false);
   });
 });
 
@@ -215,41 +254,34 @@ describe('mock product filtering (MFR-2, MFR-3)', () => {
     const response = await api().get('/catalog/products', ProductPageSchema, {
       query: { department: 'supermarket' },
     });
-    expect(response.data.products.length).toBeGreaterThan(0);
-    expect(response.data.products.every((p) => p.departmentSlug === 'supermarket')).toBe(true);
+    expect(response.data.items.length).toBeGreaterThan(0);
+    expect(response.data.items.every((p) => p.departmentSlug === 'supermarket')).toBe(true);
   });
 
   it('searches name and brand', async () => {
     const byName = await api().get('/catalog/products', ProductPageSchema, {
       query: { q: 'paracetamol' },
     });
-    expect(byName.data.products).toHaveLength(1);
+    expect(byName.data.items).toHaveLength(1);
 
     // "Peak" is a brand, not a product name; MFR-3 covers both.
     const byBrand = await api().get('/catalog/products', ProductPageSchema, {
       query: { q: 'Peak' },
     });
-    expect(byBrand.data.products[0]?.name).toBe('Whole Milk');
+    expect(byBrand.data.items[0]?.name).toBe('Whole Milk');
   });
 
   it('returns an empty page when nothing matches', async () => {
     const response = await api().get('/catalog/products', ProductPageSchema, {
       query: { q: 'zzzz-no-such-product' },
     });
-    expect(response.data.products).toHaveLength(0);
-  });
-
-  it('reports a next cursor when the page is truncated', async () => {
-    const response = await api().get('/catalog/products', ProductPageSchema, {
-      query: { limit: 2 },
-    });
-    expect(response.data.products).toHaveLength(2);
-    expect(response.data.nextCursor).not.toBeNull();
+    expect(response.data.items).toHaveLength(0);
+    expect(response.data.totalItems).toBe(0);
   });
 
   it('exposes every purchase state so MFR-5 is testable', async () => {
     const response = await api().get('/catalog/products', ProductPageSchema);
-    expect(new Set(response.data.products.map((p) => p.purchaseState))).toEqual(
+    expect(new Set(response.data.items.map((p) => p.purchaseState))).toEqual(
       new Set(['purchasable', 'prescription_only', 'out_of_stock', 'inactive']),
     );
   });
@@ -257,6 +289,59 @@ describe('mock product filtering (MFR-2, MFR-3)', () => {
   it('serves categories', async () => {
     const response = await api().get('/catalog/categories', CategoryListSchema);
     expect(response.data.categories.length).toBeGreaterThan(0);
+  });
+});
+
+describe('mock pagination (page-number envelope)', () => {
+  const api = () => new ApiClient({ baseUrl: BASE_URL, fetchImpl: createMockFetch() });
+
+  it('returns page 1 of a multi-page result', async () => {
+    const response = await api().get('/catalog/products', ProductPageSchema, {
+      query: { limit: 2, page: 1 },
+    });
+    expect(response.data.items).toHaveLength(2);
+    expect(response.data.page).toBe(1);
+    expect(response.data.limit).toBe(2);
+    expect(response.data.totalItems).toBe(6);
+    expect(response.data.totalPages).toBe(3);
+    expect(hasMorePages(response.data)).toBe(true);
+  });
+
+  it('walks to the last page, where hasMorePages goes false', async () => {
+    const last = await api().get('/catalog/products', ProductPageSchema, {
+      query: { limit: 2, page: 3 },
+    });
+    expect(last.data.items).toHaveLength(2);
+    expect(last.data.page).toBe(3);
+    expect(hasMorePages(last.data)).toBe(false);
+  });
+
+  it('returns a distinct slice per page rather than repeating page 1', async () => {
+    const one = await api().get('/catalog/products', ProductPageSchema, {
+      query: { limit: 2, page: 1 },
+    });
+    const two = await api().get('/catalog/products', ProductPageSchema, {
+      query: { limit: 2, page: 2 },
+    });
+    const idsOne = one.data.items.map((p) => p.id);
+    const idsTwo = two.data.items.map((p) => p.id);
+    expect(idsOne.some((id) => idsTwo.includes(id))).toBe(false);
+  });
+
+  it('returns an empty page past the end rather than an error', async () => {
+    const response = await api().get('/catalog/products', ProductPageSchema, {
+      query: { limit: 2, page: 99 },
+    });
+    expect(response.data.items).toHaveLength(0);
+    expect(response.data.page).toBe(99);
+  });
+
+  it('reports totalPages of 1 when a single page holds everything', async () => {
+    const response = await api().get('/catalog/products', ProductPageSchema, {
+      query: { limit: 50 },
+    });
+    expect(response.data.totalPages).toBe(1);
+    expect(hasMorePages(response.data)).toBe(false);
   });
 });
 

@@ -141,32 +141,45 @@ export const PRODUCTS_PAGE_SIZE = 20;
 /**
  * `GET /catalog/products` -> `data`.
  *
- * The pagination envelope is not pinned by the backend yet (see
- * docs/api-contract-notes.md), so both a cursor page and a bare array are
- * accepted and normalised to `{ products, nextCursor }`.
+ * Pinned by the backend contract on 2026-10-04 as a **page-number** envelope,
+ * replacing an earlier cursor assumption: `{ items, page, limit, totalItems,
+ * totalPages }`. The client sends `?page=` and `?limit=`, and decides whether to
+ * fetch more from `page < totalPages` (MFR-3).
  *
- * `nextCursor` is passed back verbatim as `?cursor=`. When the backend has no
- * cursor to give, a full page implies more may exist and a short page ends the
- * list; the app never assumes a total count.
+ * A bare array is still tolerated so an unpaginated response cannot hard-break
+ * the list, but it reports `totalPages === 1` because without totals the only
+ * honest answer is "there is at most one page".
  */
 export const ProductPageSchema = z
   .union([
     z.object({
-      products: z.array(ProductSummarySchema),
-      nextCursor: z.string().nullish(),
+      items: z.array(ProductSummarySchema),
+      page: z.number().int().min(1),
+      limit: z.number().int().min(1),
+      totalItems: z.number().int().min(0),
+      totalPages: z.number().int().min(1),
     }),
     z.array(ProductSummarySchema),
   ])
   .transform((value) => {
     if (Array.isArray(value)) {
-      // No cursor available: a full page is the only pagination signal there is.
-      const nextCursor = value.length === PRODUCTS_PAGE_SIZE ? 'offset' : null;
-      return { products: value, nextCursor };
+      return {
+        items: value,
+        page: 1,
+        limit: Math.max(value.length, 1),
+        totalItems: value.length,
+        totalPages: 1,
+      };
     }
-    return { products: value.products, nextCursor: value.nextCursor ?? null };
+    return value;
   });
 
 export type ProductPage = z.infer<typeof ProductPageSchema>;
+
+/** True while the server has another page to send (MFR-3). */
+export function hasMorePages(page: ProductPage): boolean {
+  return page.page < page.totalPages;
+}
 
 /**
  * Filters for `GET /catalog/products` (MFR-2, MFR-3).

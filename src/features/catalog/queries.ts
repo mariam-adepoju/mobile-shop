@@ -8,6 +8,7 @@ import {
   PRODUCTS_PAGE_SIZE,
   ProductDetailSchema,
   ProductPageSchema,
+  hasMorePages,
   type Category,
   type Department,
   type ProductDetail,
@@ -83,8 +84,11 @@ export const productsKey = (filters: ProductFilters) =>
   ] as const;
 
 export interface ProductPageResult {
-  readonly products: ProductSummary[];
-  readonly nextCursor: string | null;
+  readonly items: ProductSummary[];
+  readonly page: number;
+  readonly limit: number;
+  readonly totalItems: number;
+  readonly totalPages: number;
 }
 
 /**
@@ -92,10 +96,14 @@ export interface ProductPageResult {
  *
  * Filtering and search are the server's job: the raw term and slugs go out as
  * query params and nothing is matched locally (MFR-3, AGENTS.md 3.2).
+ *
+ * Pagination is by page number, matching the backend contract: `?page=` is
+ * 1-based and `?limit=` is always sent so the page size is explicit rather than
+ * a server default that could change under us.
  */
 export function fetchProductsPage(
   filters: ProductFilters,
-  cursor: string | undefined,
+  page: number,
   signal?: AbortSignal,
 ): Promise<ProductPageResult> {
   const search = (filters.search ?? '').trim();
@@ -109,7 +117,7 @@ export function fetchProductsPage(
         // `q` is the backend's documented search param name; see
         // docs/api-contract-notes.md.
         q: search.length > 0 ? search : undefined,
-        cursor,
+        page,
         limit: PRODUCTS_PAGE_SIZE,
       },
     })
@@ -119,15 +127,15 @@ export function fetchProductsPage(
 /**
  * Paged product list (MFR-3: "paginate results (infinite scroll or load more)").
  *
- * Infinite rather than an explicit page number so the cursor the backend
- * returns is passed back verbatim and no total count has to be assumed.
+ * Infinite rather than an explicit pager so the existing "Load more" affordance
+ * keeps working; the next page exists only while `page < totalPages`.
  */
 export function productsQueryOptions(filters: ProductFilters) {
   return infiniteQueryOptions({
     queryKey: productsKey(filters),
     queryFn: ({ pageParam, signal }) => fetchProductsPage(filters, pageParam, signal),
-    initialPageParam: undefined as string | undefined,
-    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => (hasMorePages(lastPage) ? lastPage.page + 1 : undefined),
   });
 }
 
@@ -153,7 +161,7 @@ export function productQueryOptions(slug: string) {
 
 /** Flatten an infinite product result into one list for rendering. */
 export function flattenPages(data: { pages: ProductPageResult[] } | undefined): ProductSummary[] {
-  return data?.pages.flatMap((page) => page.products) ?? [];
+  return data?.pages.flatMap((page) => page.items) ?? [];
 }
 
 export type { Category, ProductDetail, ProductFilters, ProductSummary };

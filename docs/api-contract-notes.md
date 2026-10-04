@@ -4,6 +4,66 @@ Every gap between the mobile app's assumptions and the deployed backend.
 Recorded here per AGENTS.md §9 so nothing is discovered for the first time on a
 device. Append-only; do not rewrite history — add a dated entry.
 
+## 2026-10-04 — M3 catalog contract assumptions
+
+M3 was built against the mock layer because Tier 1 is not deployed. These are
+the query-parameter and field names the app **assumes**, which the backend must
+either match or correct. Each is a guess the PRD does not pin, so it is listed
+explicitly rather than buried in code.
+
+### Query parameters assumed for `GET /catalog/products`
+
+| Param | Assumed | Purpose |
+| --- | --- | --- |
+| `department` | department **slug** | MFR-2 department filter |
+| `category` | category **slug** | MFR-2 category filter |
+| `q` | raw search term | MFR-3, matched by the server over name **and** brand |
+| `limit` | integer page size (app sends 20) | PRD 13 requires every list to paginate |
+| `page` | 1-based page number (app sends 1, then 2, 3…) | pagination position |
+
+**Resolved 2026-10-04 (backend decision).** Pagination is **page-number**, not
+cursor. The response envelope is pinned as:
+
+```json
+{ "items": [...], "page": 1, "limit": 20, "totalItems": 42, "totalPages": 3 }
+```
+
+The app sends `?page=` and `?limit=20`, and requests the next page only while
+`page < totalPages`. The earlier `?cursor=` / `nextCursor` assumption was wrong
+and has been removed from the schema, the query layer, and the mocks. A test now
+asserts the old cursor envelope is **rejected**, so a stale contract cannot pass
+silently.
+
+**Unconfirmed:** whether `department`/`category` are slugs or ids, and the exact
+`items[]` field names. If they differ, only `fetchProductsPage` and the schemas
+in `src/features/catalog/` need to change.
+
+### Response shapes
+
+1. **Pagination envelope.** Pinned as above (page-number). A bare array is still
+   accepted as a fallback and reports `totalPages: 1`, so an unpaginated response
+   degrades to a single page instead of breaking the list.
+2. **`purchaseState` as a discrete enum.** Confirmed as server-owned: one of
+   `purchasable | prescription_only | out_of_stock | inactive`. The app **refuses
+   to guess** — it will not derive purchasability from `stock` or
+   `requiresPrescription`, because that is a business decision the server owns
+   (AGENTS.md 3.2). The backend must compute and send the state.
+3. **Money.** `priceMinor` as an integer (kobo) plus `currency`, per PRD 7.1. The
+   schema rejects a fractional price outright rather than rounding it.
+4. **Pharmacy fields.** Optional `pharmacy: { dosageForm, strength, nafdacNumber,
+   requiresPrescription }` (MFR-4). Everything renders only when present, so a
+   supermarket product needs none of it.
+
+### Open gaps carried into M3
+
+- Add to cart is intentionally inert: it needs auth (M4) and the cart mutation
+  (M5). The button states the server's truth and explains when it is disabled,
+  so the screen does not fake a successful add.
+- `GET /catalog/categories` is assumed to accept `?department=` to scope the
+  filter chips. If it does not, categories must be filtered on the client,
+  which is acceptable because they are public reference data rather than
+  anything the server decides for us.
+
 ## 2026-10-04 — M2 baseline probe
 
 Live probe of `https://daywell-shop.vercel.app` (acceptance runs against `live`

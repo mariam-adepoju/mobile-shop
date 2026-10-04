@@ -1,4 +1,5 @@
 import { ApiClientError, type FetchLike } from '@/lib/api';
+import { PRODUCTS_PAGE_SIZE } from '@/features/catalog';
 
 import {
   categoriesResponse,
@@ -95,9 +96,10 @@ function notFound(path: string): unknown {
 /**
  * Apply the filter query params the app sends.
  *
- * The real server does the matching; the mock must respect `department`,
- * `category` and `q` or the filter UI would appear to do nothing in mock mode.
- * `limit` is honoured so "Load more" can be demonstrated.
+ * The real server does the matching and paging; the mock must respect
+ * `department`, `category`, `q`, `page` and `limit`, or the filter and
+ * pagination UI would appear to do nothing in mock mode. The envelope mirrors
+ * the backend contract: `{ items, page, limit, totalItems, totalPages }`.
  */
 function filterProducts(url: string): unknown {
   const { products } = productsResponse.data as {
@@ -108,7 +110,9 @@ function filterProducts(url: string): unknown {
   const department = params.get('department');
   const category = params.get('category');
   const search = (params.get('q') ?? '').trim().toLowerCase();
-  const limit = Number(params.get('limit') ?? '0');
+  // Page is 1-based; limit falls back to the schema's page size.
+  const limit = Math.max(Number(params.get('limit') ?? 0) || PRODUCTS_PAGE_SIZE, 1);
+  const page = Math.max(Number(params.get('page') ?? 1) || 1, 1);
 
   const matched = products.filter((product) => {
     if (department && product.departmentSlug !== department) return false;
@@ -122,12 +126,18 @@ function filterProducts(url: string): unknown {
     return true;
   });
 
-  const page = limit > 0 ? matched.slice(0, limit) : matched;
+  // A request past the last page is empty rather than an error, matching a real
+  // paginated endpoint.
+  const start = (page - 1) * limit;
+  const totalPages = Math.max(Math.ceil(matched.length / limit), 1);
+
   return {
     data: {
-      products: page,
-      // A truncated page means there is more to fetch.
-      nextCursor: matched.length > page.length ? 'offset' : null,
+      items: matched.slice(start, start + limit),
+      page,
+      limit,
+      totalItems: matched.length,
+      totalPages,
     },
   };
 }
