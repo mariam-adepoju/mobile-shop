@@ -32,7 +32,12 @@ yarn-error.*
 *.pem
 
 # local env files
-.env*.local
+# Ignore every .env variant, but always keep .env.example (the committed
+# contract) and .env templates. Without this, a web-app .env full of secrets
+# sitting in the root would be picked up by `git add -A`.
+.env
+.env.*
+!.env.example
 
 # typescript
 *.tsbuildinfo
