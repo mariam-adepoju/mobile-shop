@@ -7,7 +7,8 @@ node_modules/
 .expo/
 dist/
 web-build/
-expo-env.d.ts
+# Root-only: `types/expo-env.d.ts` is committed so CI has Expo's ambient types.
+/expo-env.d.ts
 
 # Native
 .kotlin/
@@ -35,6 +36,9 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+
+# tests
+coverage/
 
 example
 
