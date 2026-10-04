@@ -107,9 +107,9 @@ describe('parseConfig', () => {
   );
 
   it('rejects an Auth0 domain that carries a scheme or path', () => {
-    expect(() => parseConfig({ ...LIVE_ENV, EXPO_PUBLIC_AUTH0_DOMAIN: 'https://x.auth0.com' })).toThrow(
-      /bare host/,
-    );
+    expect(() =>
+      parseConfig({ ...LIVE_ENV, EXPO_PUBLIC_AUTH0_DOMAIN: 'https://x.auth0.com' }),
+    ).toThrow(/bare host/);
   });
 
   it('rejects an Auth0 audience that is not a URI', () => {

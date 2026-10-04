@@ -11,9 +11,7 @@ export default function Index() {
       }}
     >
       <Text style={{ fontSize: 20, fontWeight: '600' }}>Daywell</Text>
-      <Text style={{ marginTop: 8, textAlign: 'center' }}>
-        Mobile foundation in progress.
-      </Text>
+      <Text style={{ marginTop: 8, textAlign: 'center' }}>Mobile foundation in progress.</Text>
     </View>
   );
 }
