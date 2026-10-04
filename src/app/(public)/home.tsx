@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { StyleSheet, View } from 'react-native';
+import { Link } from 'expo-router';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { departmentsQueryOptions, type Department } from '@/features/catalog';
 import { AppText } from '@/components/text';
@@ -57,19 +58,37 @@ export default function HomeScreen() {
   );
 }
 
-/** One tappable department row (DESIGN.md 5, Product Card proportions). */
+/**
+ * One tappable department row (MFR-1 -> MFR-2).
+ *
+ * A `Link`, not a styled `View`: a role of "button" on a non-pressable view
+ * lies to a screen reader (AGENTS.md 10).
+ */
 function DepartmentRow({ department }: { department: Department }) {
   return (
-    <View accessibilityRole="button" accessibilityLabel={department.name} style={styles.row}>
-      <AppText role="ui" weight="semibold">
-        {department.name}
-      </AppText>
-      {department.description ? (
-        <AppText role="body" style={styles.description}>
-          {department.description}
+    <Link
+      asChild
+      accessibilityRole="button"
+      href={{ pathname: '/shop/[department]', params: { department: department.slug } }}
+      style={styles.row}
+      testID={`department-${department.slug}`}
+    >
+      <Pressable
+        accessibilityLabel={
+          department.description ? `${department.name}. ${department.description}` : department.name
+        }
+        style={({ pressed }) => [styles.row, pressed ? styles.pressed : null]}
+      >
+        <AppText role="ui" weight="semibold">
+          {department.name}
         </AppText>
-      ) : null}
-    </View>
+        {department.description ? (
+          <AppText role="body" style={styles.description}>
+            {department.description}
+          </AppText>
+        ) : null}
+      </Pressable>
+    </Link>
   );
 }
 
@@ -92,5 +111,8 @@ const styles = StyleSheet.create({
   },
   description: {
     color: colors.foggy,
+  },
+  pressed: {
+    opacity: 0.9,
   },
 });

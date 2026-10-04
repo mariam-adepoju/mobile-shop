@@ -4,9 +4,12 @@
  * Removable once the backend Tier 1 slice is live (PRD 4.4).
  */
 export {
+  categoriesResponse,
   departmentsBareArrayResponse,
   departmentsResponse,
   errorResponse,
+  findProductFixture,
   healthResponse,
+  productsResponse,
 } from './fixtures';
 export { createMockFetch, hasMockRoute, type MockFetchOptions } from './mock-fetch';
