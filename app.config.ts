@@ -7,7 +7,12 @@ import type { ConfigContext, ExpoConfig } from 'expo/config';
  * Auth0 Native application (callback URLs, Android signing SHA-256) and in
  * both app stores. Changing one after release requires a new store listing.
  */
-const BUNDLE_ID = 'com.daywellshop.mobile';
+/**
+ * Final and immutable: Auth0 binds its callback URLs to the app scheme, and
+ * the app stores bind to this bundle/package name. Changing it later would
+ * require re-registering the Auth0 application (AGENTS.md 8, PRD 7.4).
+ */
+const BUNDLE_ID = 'com.marrizon.daywell';
 
 const DEFAULT_SCHEME = 'daywell';
 

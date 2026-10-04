@@ -38,3 +38,5 @@ export {
 export { ErrorEnvelopeSchema, SuccessEnvelopeSchema, parseRetryAfter } from './envelope';
 
 export { TokenManager, type GetAccessToken, type RefreshAccessToken } from './token-manager';
+
+export { getApiClient, resetApiClientForTests, setSessionHooks, setTokenManager } from './instance';
