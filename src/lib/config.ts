@@ -200,12 +200,22 @@ export function assertAuth0Configured(config: AppConfig = getConfig()): Auth0Con
 /** Per-request ceiling before the call is aborted. */
 export const API_TIMEOUT_MS = 15_000;
 
+/** Bounded backoff policy for idempotent reads. */
+export interface RetryPolicy {
+  /** Total attempts, including the first. */
+  readonly maxAttempts: number;
+  /** Delay before the second attempt; doubles from here. */
+  readonly baseDelayMs: number;
+  /** Upper bound on any single delay. */
+  readonly maxDelayMs: number;
+}
+
 /** Bounded backoff for idempotent GET retries only. */
-export const API_RETRY = {
+export const API_RETRY: RetryPolicy = {
   maxAttempts: 3,
   baseDelayMs: 300,
   maxDelayMs: 2_000,
-} as const;
+};
 
 /** PRD 6.1: poll `GET /cart` every 3-5s while focused and active. */
 export const CART_POLL_INTERVAL_MS = 4_000;

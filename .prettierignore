@@ -6,3 +6,11 @@ coverage
 android
 ios
 package-lock.json
+
+# Prose is authored by hand and must not be reflowed by a formatter.
+# PRD.md, DESIGN.md and AGENTS.md are the source of truth for the project;
+# reformatting them would bury real edits in whitespace noise.
+*.md
+docs/
+.agents/
+.kiro/
