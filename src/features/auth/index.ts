@@ -8,6 +8,7 @@ export { AUTH_SCOPES, buildSignInParams, getAuth0Client } from './auth0-client';
 export { createAuth0TokenManager } from './token-manager';
 export {
   AuthSessionProvider,
+  resolvePendingRoute,
   useAuthSession,
   type AuthSession,
   type SessionStatus,

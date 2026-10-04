@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { StyleSheet, View } from 'react-native';
 
 import { AppText, Button, DemoStoreNotice, SkeletonList } from '@/components';
+import { RequireAuth } from '@/components/require-auth';
 import { meQueryOptions } from '@/features/account';
 import { useAuthSession } from '@/features/auth';
 import { ApiError, messageForErrorCode } from '@/lib/api';
@@ -15,6 +16,15 @@ import { colors, spacing } from '@/theme';
  * email here is the graded-core proof that both clients share one identity.
  */
 export default function AccountScreen() {
+  return (
+    <RequireAuth>
+      <AccountProfile />
+    </RequireAuth>
+  );
+}
+
+/** Split out so the query only exists inside the authenticated subtree. */
+function AccountProfile() {
   const { signOut } = useAuthSession();
   const me = useQuery(meQueryOptions());
 

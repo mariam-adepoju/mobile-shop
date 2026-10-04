@@ -1,4 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
+import { router, type Href } from 'expo-router';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { type ReactNode } from 'react';
 
@@ -138,6 +139,23 @@ export function AuthSessionProvider({ children }: { children: ReactNode }) {
     setPendingRoute(undefined);
   }, []);
 
+  // After a successful sign-in, send the user back to where they were going.
+  // Navigating from the provider (rather than each screen) means the resume
+  // happens once, whichever screen asked for it.
+  useEffect(() => {
+    const { route } = resolvePendingRoute({ status, pendingRoute });
+    if (route === undefined) return;
+
+    // Clear first, then navigate. `clearPendingRoute` is deferred so the
+    // synchronous state update does not cascade a render inside this effect
+    // (React Compiler's `set-state-in-effect` rule), while still guaranteeing the
+    // route is consumed exactly once.
+    queueMicrotask(() => {
+      clearPendingRoute();
+      router.replace(route as Href);
+    });
+  }, [clearPendingRoute, pendingRoute, status]);
+
   // A 401 that survives one refresh means the session is genuinely unusable
   // (AGENTS.md 6.4). Sign out so the guard sends the user to sign-in instead of
   // looping on failing requests. Registered here because it needs `signOut`.
@@ -174,6 +192,30 @@ export function AuthSessionProvider({ children }: { children: ReactNode }) {
   );
 
   return <AuthSessionContext.Provider value={value}>{children}</AuthSessionContext.Provider>;
+}
+
+/**
+ * Decide what to do once the session status changes (AGENTS.md 8).
+ *
+ * Kept as a pure function so the resume behaviour is unit-testable without
+ * mounting a navigator, and so the rule lives in one place:
+ *
+ * - `pendingRoute` holds a **route path only**: never a token, a query value, or
+ *   anything else sensitive (AGENTS.md 3.5).
+ * - Resume only on the transition to `signed-in`. Resuming earlier would send a
+ *   signed-out user to a screen that needs a token.
+ * - A missing route is not an error; the user simply lands on the default home.
+ * - The route is cleared once consumed, so a re-render cannot navigate twice.
+ */
+export function resolvePendingRoute(input: {
+  readonly status: SessionStatus;
+  readonly pendingRoute: string | undefined;
+}): { readonly route: string | undefined; readonly shouldClear: boolean } {
+  if (input.status !== 'signed-in') return { route: undefined, shouldClear: false };
+  if (input.pendingRoute === undefined || input.pendingRoute.length === 0) {
+    return { route: undefined, shouldClear: false };
+  }
+  return { route: input.pendingRoute, shouldClear: true };
 }
 
 /** Throws outside the provider, which would be a wiring bug, not a user state. */
