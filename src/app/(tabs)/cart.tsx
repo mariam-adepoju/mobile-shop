@@ -21,6 +21,10 @@ export default function CartRoute() {
   const [appActive, setAppActive] = useState(AppState.currentState === 'active');
   useFocusEffect(useCallback(() => {
     void refetchCart();
+    return undefined;
+  }, [refetchCart]));
+
+  useFocusEffect(useCallback(() => {
     if (!shouldPollCart(true, appActive)) return undefined;
     const timer = setInterval(() => { if (AppState.currentState === 'active') void refetchCart(); }, CART_POLL_INTERVAL_MS);
     return () => clearInterval(timer);
