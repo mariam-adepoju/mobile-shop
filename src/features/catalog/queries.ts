@@ -1,6 +1,7 @@
 import { infiniteQueryOptions, queryOptions } from '@tanstack/react-query';
 
 import { getApiClient } from '@/lib/api';
+import { getConfig } from '@/lib/config';
 
 import {
   CategoryListSchema,
@@ -91,6 +92,18 @@ export interface ProductPageResult {
   readonly totalPages: number;
 }
 
+/** Live catalog images are root-relative paths; native Image needs a full URL. */
+function resolveProductImage<T extends { readonly imageUrl?: string | null }>(product: T): T {
+  const imageUrl = product.imageUrl;
+  if (imageUrl == null || URL.canParse(imageUrl)) return product;
+
+  const apiBaseUrl = getConfig().apiBaseUrl;
+  if (!apiBaseUrl) return product;
+
+  const origin = new URL(apiBaseUrl).origin;
+  return { ...product, imageUrl: new URL(imageUrl, origin).toString() };
+}
+
 /**
  * One page of `GET /catalog/products`.
  *
@@ -121,7 +134,10 @@ export function fetchProductsPage(
         limit: PRODUCTS_PAGE_SIZE,
       },
     })
-    .then((response) => response.data);
+    .then((response) => ({
+      ...response.data,
+      items: response.data.items.map(resolveProductImage),
+    }));
 }
 
 /**
@@ -149,7 +165,7 @@ export const productDetailKey = (slug: string) => ['catalog', 'product', slug] a
 export function fetchProduct(slug: string, signal?: AbortSignal): Promise<ProductDetail> {
   return getApiClient()
     .get(`/catalog/products/${encodeURIComponent(slug)}`, ProductDetailSchema, { signal })
-    .then((response) => response.data);
+    .then((response) => resolveProductImage(response.data));
 }
 
 export function productQueryOptions(slug: string) {

@@ -6,7 +6,13 @@ import { departmentsQueryOptions, type Department } from '@/features/catalog';
 import { AppText } from '@/components/text';
 import { DemoStoreNotice } from '@/components/demo-store-notice';
 import { EmptyState, ErrorState, Screen, SkeletonList } from '@/components/screen';
-import { ApiError, messageForErrorCode } from '@/lib/api';
+import {
+  ApiError,
+  ContractError,
+  messageForErrorCode,
+  NetworkError,
+  TimeoutError,
+} from '@/lib/api';
 import { colors, radii, spacing } from '@/theme';
 
 /**
@@ -96,6 +102,13 @@ function DepartmentRow({ department }: { department: Department }) {
 function describeError(error: unknown): string {
   if (error instanceof ApiError) {
     return messageForErrorCode(error.code, error.message);
+  }
+  if (
+    error instanceof ContractError ||
+    error instanceof NetworkError ||
+    error instanceof TimeoutError
+  ) {
+    return error.message;
   }
   return 'Something went wrong. Please try again.';
 }

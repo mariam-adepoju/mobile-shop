@@ -68,6 +68,36 @@ describe('department schemas', () => {
     });
     expect(parsed.success).toBe(true);
   });
+
+  it('normalises the deployed API department shape', () => {
+    const parsed = DepartmentListSchema.safeParse({
+      departments: [
+        { department: 'pharmacy', productCount: 12, inStockCount: 11 },
+        { department: 'supermarket', productCount: 12, inStockCount: 11 },
+      ],
+    });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.departments.map(({ id, slug, name }) => [id, slug, name])).toEqual([
+        ['pharmacy', 'pharmacy', 'Pharmacy'],
+        ['supermarket', 'supermarket', 'Supermarket'],
+      ]);
+    }
+  });
+});
+
+describe('category schemas', () => {
+  it('normalises the deployed API category shape', () => {
+    const parsed = CategoryListSchema.safeParse({
+      categories: [{ slug: 'first-aid', name: 'First Aid', department: 'pharmacy' }],
+    });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.categories).toEqual([
+        { id: 'first-aid', slug: 'first-aid', name: 'First Aid' },
+      ]);
+    }
+  });
 });
 
 describe('fetchDepartments through the real client', () => {
@@ -165,6 +195,29 @@ describe('product schemas', () => {
     const parsed = ProductDetailSchema.safeParse({ ...baseProduct, description: 'x' });
     expect(parsed.success).toBe(true);
     if (parsed.success) expect(parsed.data.pharmacy).toBeUndefined();
+  });
+
+  it('normalises the deployed wrapped product detail without inferring purchase state', () => {
+    const parsed = ProductDetailSchema.safeParse({
+      product: {
+        ...baseProduct,
+        department: 'pharmacy',
+        categorySlug: 'first-aid',
+        stock: 54,
+        requiresPrescription: false,
+        dosageForm: null,
+        strength: null,
+        nafdacRegNo: 'DEMO-NAFDAC-0009',
+        purchaseState: 'purchasable',
+      },
+    });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.departmentSlug).toBe('pharmacy');
+      expect(parsed.data.stockQuantity).toBe(54);
+      expect(parsed.data.purchaseState).toBe('purchasable');
+      expect(parsed.data.pharmacy?.nafdacNumber).toBe('DEMO-NAFDAC-0009');
+    }
   });
 });
 

@@ -21,6 +21,10 @@ describe('messageForErrorCode', () => {
     expect(messageForErrorCode('OUT_OF_STOCK')).toMatch(/sold out/i);
   });
 
+  it('maps the live API UNAUTHORIZED code to an actionable sign-in message', () => {
+    expect(messageForErrorCode('UNAUTHORIZED')).toMatch(/sign in again/i);
+  });
+
   it('does not collapse the payment states into one message (PRD 9.1)', () => {
     const codes = [
       'PAYMENT_IN_PROGRESS',

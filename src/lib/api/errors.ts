@@ -22,6 +22,7 @@ export const KNOWN_ERROR_CODES = [
   'EMPTY_CART',
   // Identity / address
   'UNAUTHENTICATED',
+  'UNAUTHORIZED',
   'FORBIDDEN',
   'ADDRESS_NOT_FOUND',
   'INVALID_ADDRESS',

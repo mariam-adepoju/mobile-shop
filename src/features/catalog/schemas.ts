@@ -25,14 +25,47 @@ export type Department = z.infer<typeof DepartmentSchema>;
 /**
  * `GET /catalog/departments` -> `data` (PRD 4.1).
  *
- * The exact envelope for this endpoint is not yet pinned down by the backend
- * (see docs/api-contract-notes.md), so the schema accepts either a bare array
- * or a `{ departments: [...] }` wrapper and normalises to one internal shape.
- * Once M1 ships, this should collapse to whichever form the backend uses.
+ * The deployed API uses `{ departments: [{ department, productCount,
+ * inStockCount }] }`. Older fixtures and backends may use canonical department
+ * objects or a bare array; all supported forms normalize to one internal shape.
  */
+const LiveDepartmentListSchema = z.object({
+  departments: z.array(
+    z.object({
+      department: z.string().min(1),
+      productCount: z.number().int().nonnegative().optional(),
+      inStockCount: z.number().int().nonnegative().optional(),
+    }),
+  ),
+});
+
+function departmentName(slug: string): string {
+  return slug
+    .split('-')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
 export const DepartmentListSchema = z
-  .union([z.object({ departments: z.array(DepartmentSchema) }), z.array(DepartmentSchema)])
-  .transform((value) => ({ departments: Array.isArray(value) ? value : value.departments }));
+  .union([
+    z.object({ departments: z.array(DepartmentSchema) }),
+    z.array(DepartmentSchema),
+    LiveDepartmentListSchema,
+  ])
+  .transform((value) => {
+    const departments = Array.isArray(value) ? value : value.departments;
+    return {
+      departments: departments.map((item) =>
+        'department' in item
+          ? {
+              id: item.department,
+              slug: item.department,
+              name: departmentName(item.department),
+            }
+          : item,
+      ),
+    };
+  });
 
 export type DepartmentList = z.infer<typeof DepartmentListSchema>;
 
@@ -53,9 +86,32 @@ export const CategorySchema = z.object({
 export type Category = z.infer<typeof CategorySchema>;
 
 /** `GET /catalog/categories`, optionally scoped by `?department=`. */
+const LiveCategoryListSchema = z.object({
+  categories: z.array(
+    z.object({
+      slug: z.string().min(1),
+      name: z.string().min(1),
+      department: z.string().min(1).optional(),
+    }),
+  ),
+});
+
 export const CategoryListSchema = z
-  .union([z.object({ categories: z.array(CategorySchema) }), z.array(CategorySchema)])
-  .transform((value) => ({ categories: Array.isArray(value) ? value : value.categories }));
+  .union([
+    z.object({ categories: z.array(CategorySchema) }),
+    z.array(CategorySchema),
+    LiveCategoryListSchema,
+  ])
+  .transform((value) => {
+    const categories = Array.isArray(value) ? value : value.categories;
+    return {
+      categories: categories.map((category) =>
+        'id' in category
+          ? category
+          : { id: category.slug, slug: category.slug, name: category.name },
+      ),
+    };
+  });
 
 export type CategoryList = z.infer<typeof CategoryListSchema>;
 
@@ -126,12 +182,41 @@ export type ProductSummary = z.infer<typeof ProductSummarySchema>;
  * A superset of the summary: the list view is just the detail minus the long
  * copy, which keeps one source of truth for pricing and purchase state.
  */
-export const ProductDetailSchema = ProductSummarySchema.extend({
+const ProductDetailShapeSchema = ProductSummarySchema.extend({
   description: z.string().nullish(),
   /** Remaining units as the server counts them; never used for a decision. */
   stockQuantity: z.number().int().nullish(),
   pharmacy: PharmacyAttributesSchema.nullish(),
 });
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * The live endpoint wraps its result in `{ product }` and uses flat pharmacy
+ * fields. Normalize those wire details here; purchase state remains the
+ * explicit server value and is never inferred by the client.
+ */
+export const ProductDetailSchema = z.preprocess((input) => {
+  if (!isRecord(input)) return input;
+  const product = isRecord(input.product) ? input.product : input;
+  if (!('department' in product) && !('stock' in product) && !('nafdacRegNo' in product)) {
+    return product;
+  }
+
+  return {
+    ...product,
+    departmentSlug: product.department,
+    stockQuantity: product.stock,
+    pharmacy: {
+      dosageForm: product.dosageForm,
+      strength: product.strength,
+      nafdacNumber: product.nafdacRegNo,
+      requiresPrescription: product.requiresPrescription,
+    },
+  };
+}, ProductDetailShapeSchema);
 
 export type ProductDetail = z.infer<typeof ProductDetailSchema>;
 

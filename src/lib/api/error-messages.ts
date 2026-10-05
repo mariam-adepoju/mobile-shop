@@ -16,6 +16,7 @@ const MESSAGES: Readonly<Record<KnownErrorCode, string>> = {
   EMPTY_CART: 'Your cart is empty.',
 
   UNAUTHENTICATED: 'Your session has expired. Please sign in again.',
+  UNAUTHORIZED: 'Your session could not be verified. Please sign in again.',
   FORBIDDEN: 'You do not have access to this.',
   ADDRESS_NOT_FOUND: 'That delivery address no longer exists.',
   INVALID_ADDRESS: 'Please check the delivery address.',

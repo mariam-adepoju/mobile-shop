@@ -21,7 +21,13 @@ import {
   SearchField,
   SkeletonList,
 } from '@/components';
-import { ApiError, messageForErrorCode } from '@/lib/api';
+import {
+  ApiError,
+  ContractError,
+  messageForErrorCode,
+  NetworkError,
+  TimeoutError,
+} from '@/lib/api';
 import { colors, spacing } from '@/theme';
 
 /**
@@ -142,7 +148,11 @@ function ProductErrorState({ error, onRetry }: { error: unknown; onRetry: () => 
   const description =
     error instanceof ApiError
       ? messageForErrorCode(error.code, error.message)
-      : 'Please try again.';
+      : error instanceof ContractError ||
+          error instanceof NetworkError ||
+          error instanceof TimeoutError
+        ? error.message
+        : 'Please try again.';
 
   return (
     <ErrorState

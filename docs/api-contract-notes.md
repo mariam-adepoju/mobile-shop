@@ -117,3 +117,71 @@ All four routes exist: `GET /cart`, `POST /cart/items`, `PATCH /cart/items/{prod
 POST accepts `{ productId, quantity }`, PATCH accepts `{ quantity }`, DELETE accepts no body. Stock and max-per-order are enforced on the server, with structured cart error codes. No cart mock is used by the M5 feature. ETag support was not found on the GET handler, so polling sends no conditional header.
 
 M5 additionally uses Expo SDK 57 `expo-network` to detect the offline-to-online transition and refetch the cart query while foregrounded. The matching native module was added with `npx expo install expo-network`.
+
+## 2026-10-05 - Mobile failure report
+
+The reported phone screenshot shows the public departments screen failing before
+the product list is opened. The current Home screen calls `GET /catalog/departments`;
+the product screen calls `GET /catalog/categories` and `GET /catalog/products`.
+This workspace is configured for mock mode, whose typed fixtures cover those
+three routes and pass through the normal API envelope and Zod validation.
+
+Attempted a fresh read-only request to the production health and catalog routes
+from this workspace. The environment could not establish a connection to
+`daywell-shop.vercel.app` (curl error 7), and the web reader could not access the
+exact API URLs. This is an inconclusive probe, not a current status result. The
+last successful recorded probe remains the 2026-10-04 result above: `/api/v1`
+health and departments returned 404 while `/api/health` returned 200.
+
+At the time of this investigation, the local Auth0 Native application client ID
+and API audience were unset. The owner has since supplied both public values in
+`.env`, so the earlier statement that local Auth0 configuration is missing is
+outdated. This makes the client configuration eligible to start sign-in, but does
+not prove the Auth0 Native application's callback/logout URLs, Google connection,
+or API audience configuration are correct. Sign-in and same-account proof still
+need a rebuilt native app and physical-device verification. Cart sync likewise
+remains unverified on a physical device.
+
+The catalog screens now show the API client's safe contract/network/timeout message
+instead of replacing those failures with generic retry copy. The device screenshot
+predates or does not reflect that copy change until a new app build is installed.
+
+## 2026-10-05 - Live API verification and catalog contract correction
+
+The owner confirmed `.env` is now in `live` mode and contains the Auth0 Native
+client ID and API audience. A read-only probe from a network-enabled shell returned:
+
+| Request | Result |
+| --- | --- |
+| `GET /api/v1/health` | 200; service and database report `ok` |
+| `GET /api/v1/catalog/departments` | 200; items use `{ department, productCount, inStockCount }` |
+| `GET /api/v1/catalog/categories` | 200; items use `{ slug, name, department }` |
+| `GET /api/v1/catalog/products?page=1&limit=20` | 200; 20 items, `totalItems: 24`, `totalPages: 2` |
+| `GET /api/v1/me` without credentials | 401 `UNAUTHORIZED`, as expected for a protected route |
+| `GET /api/v1/cart` without credentials | 401 `UNAUTHORIZED`, as expected for a protected route |
+| `GET /api/health` | 200 |
+
+This confirms the screenshot's root cause: departments return HTTP 200, but the
+wire items omit the required `id`, `slug`, and `name` fields, so the previous
+department Zod schema raised a contract error. Categories likewise omit `id`.
+The mobile schemas now normalize these deployed forms. Product detail is wrapped
+as `{ product: ... }` and has flat pharmacy fields; the detail schema now unwraps
+and maps those fields while retaining the server's explicit `purchaseState`.
+Product image paths are root-relative on the API response; the catalog query
+layer now resolves them against the configured API host for native image loading.
+Unit tests cover the department/category/detail mappings.
+
+The department-filtered categories endpoint returns only pharmacy categories for
+`?department=pharmacy`. Product filters are a separate deployed gap: product
+requests with `department`, `departmentSlug`, `departmentId`, `category`,
+`categorySlug`, `categoryId`, `q`, `search`, and `query` all returned the same
+24-item unfiltered result. The mobile client sends the documented `department`,
+`category`, and `q` values; it does not locally filter because the server owns
+catalog search/filter semantics (AGENTS.md §5). Backend work is required for
+MFR-2 and MFR-3 filtering/search acceptance.
+
+An Auth0 `/authorize` request using the configured public client, Android callback,
+Google connection, and audience returned HTTP 302, indicating the authorization
+flow starts. No login was completed, so token issuance, callback handling, and
+`GET /me` with a real access token remain unverified. A physical-device rebuild
+and sign-in/cart-sync acceptance are still required.
