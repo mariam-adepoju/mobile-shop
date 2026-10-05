@@ -1,16 +1,19 @@
 import { Tabs } from 'expo-router';
-import { useEffect } from 'react';
+import { useNetworkState } from 'expo-network';
+import { useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
 
 import { AppText } from '@/components/text';
 import { useAuthSession } from '@/features/auth';
-import { useCart } from '@/features/cart';
+import { shouldRefetchOnReconnect, useCart } from '@/features/cart';
 import { CART_BADGE_POLL_INTERVAL_MS } from '@/lib/config';
 import { background, colors } from '@/theme';
 
 /** The cart badge shares the same query as the cart screen and product adds. */
 export default function TabsLayout() {
   const { status } = useAuthSession();
+  const network = useNetworkState();
+  const wasOnline = useRef(true);
   const cart = useCart({
     enabled: status === 'signed-in',
   });
@@ -39,6 +42,12 @@ export default function TabsLayout() {
     start();
     return () => { subscription.remove(); stop(); };
   }, [refetchCart, status]);
+  const online = network.isConnected !== false && network.isInternetReachable !== false;
+  useEffect(() => {
+    const shouldRefetch = shouldRefetchOnReconnect(wasOnline.current, online, AppState.currentState === 'active');
+    wasOnline.current = online;
+    if (status === 'signed-in' && shouldRefetch) void refetchCart();
+  }, [online, refetchCart, status]);
   return (
     <Tabs
       screenOptions={{

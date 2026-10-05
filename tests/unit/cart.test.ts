@@ -7,6 +7,7 @@ import {
   removeCartItemMutationOptions,
   setCartFromServer,
   shouldPollCart,
+  shouldRefetchOnReconnect,
   updateCartItemMutationOptions,
 } from '@/features/cart';
 import type { Cart } from '@/features/cart';
@@ -44,6 +45,13 @@ describe('cart contract and cache updates', () => {
     expect(shouldPollCart(true, false)).toBe(false);
     expect(shouldPollCart(false, true)).toBe(false);
     expect(shouldPollCart(false, false)).toBe(false);
+  });
+
+  it('refetches only on reconnect while the app is active', () => {
+    expect(shouldRefetchOnReconnect(false, true, true)).toBe(true);
+    expect(shouldRefetchOnReconnect(false, true, false)).toBe(false);
+    expect(shouldRefetchOnReconnect(true, true, true)).toBe(false);
+    expect(shouldRefetchOnReconnect(false, false, true)).toBe(false);
   });
 
   it('optimistically changes quantity without calculating money', () => {

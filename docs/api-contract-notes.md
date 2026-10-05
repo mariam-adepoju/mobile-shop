@@ -115,3 +115,5 @@ Inspected the handlers and presenter in the web repository (`src/app/api/v1/cart
 All four routes exist: `GET /cart`, `POST /cart/items`, `PATCH /cart/items/{productId}` and `DELETE /cart/items/{productId}`. Every success returns the full cart at `data.cart`, with `{ items, totalQuantity, subtotalMinor, currency }`. Each item has `productId`, `slug`, `name`, `brand`, `imageUrl`, `department`, `unitPriceMinor`, `quantity`, `lineTotalMinor`, `stock`, `maxPerOrder`, `requiresPrescription`, and `isActive`. Prices and totals are integer kobo; currency is `NGN`.
 
 POST accepts `{ productId, quantity }`, PATCH accepts `{ quantity }`, DELETE accepts no body. Stock and max-per-order are enforced on the server, with structured cart error codes. No cart mock is used by the M5 feature. ETag support was not found on the GET handler, so polling sends no conditional header.
+
+M5 additionally uses Expo SDK 57 `expo-network` to detect the offline-to-online transition and refetch the cart query while foregrounded. The matching native module was added with `npx expo install expo-network`.
