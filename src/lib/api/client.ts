@@ -56,11 +56,14 @@ export interface RequestOptions<T> {
   /** Caller-owned cancellation, e.g. a screen unmounting. */
   readonly signal?: AbortSignal;
   readonly timeoutMs?: number;
+  /** Use the real backend even when other features run against fixtures. */
+  readonly liveOnly?: boolean;
 }
 
 export interface ApiClientOptions {
   readonly baseUrl: string;
   readonly fetchImpl: FetchLike;
+  readonly liveFetchImpl?: FetchLike;
   readonly tokens?: TokenManager;
   /** Invoked once when a request still fails with 401 after a refresh. */
   readonly onSessionExpired?: () => void;
@@ -115,6 +118,7 @@ function safeJsonParse(text: string): unknown {
 export class ApiClient {
   readonly #baseUrl: string;
   readonly #fetch: FetchLike;
+  readonly #liveFetch: FetchLike;
   readonly #tokens: TokenManager | undefined;
   readonly #onSessionExpired: (() => void) | undefined;
   readonly #sleep: (ms: number) => Promise<void>;
@@ -124,6 +128,7 @@ export class ApiClient {
   constructor(options: ApiClientOptions) {
     this.#baseUrl = options.baseUrl.replace(/\/+$/, '');
     this.#fetch = options.fetchImpl;
+    this.#liveFetch = options.liveFetchImpl ?? options.fetchImpl;
     this.#tokens = options.tokens;
     this.#onSessionExpired = options.onSessionExpired;
     this.#sleep = options.sleep ?? defaultSleep;
@@ -250,7 +255,7 @@ export class ApiClient {
     }, timeoutMs);
 
     try {
-      const raw = await this.#fetch(url, {
+      const raw = await (options.liveOnly ? this.#liveFetch : this.#fetch)(url, {
         method,
         headers,
         signal: controller.signal,
@@ -316,5 +321,13 @@ export class ApiClient {
     options: Omit<RequestOptions<T>, 'path' | 'method' | 'schema'> = {},
   ) {
     return this.request<T>({ ...options, path, method: 'POST', schema });
+  }
+
+  patch<T>(path: string, schema: ResponseSchema<T>, options: Omit<RequestOptions<T>, 'path' | 'method' | 'schema'> = {}) {
+    return this.request<T>({ ...options, path, method: 'PATCH', schema });
+  }
+
+  delete<T>(path: string, schema: ResponseSchema<T>, options: Omit<RequestOptions<T>, 'path' | 'method' | 'schema'> = {}) {
+    return this.request<T>({ ...options, path, method: 'DELETE', schema });
   }
 }

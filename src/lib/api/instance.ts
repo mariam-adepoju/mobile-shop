@@ -29,7 +29,6 @@ function resolveFetch(): FetchLike {
   const config = getConfig();
   if (config.mode === 'mock') {
     logger.info('api.mode', { mode: 'mock' });
-    // A small delay makes the skeleton state visible, as a real network would.
     return createMockFetch({ latencyMs: 150 });
   }
   // Injected rather than referenced so the `no-restricted-globals` rule only
@@ -51,6 +50,7 @@ export function getApiClient(): ApiClient {
     shared = new ApiClient({
       baseUrl: config.apiBaseUrl,
       fetchImpl: resolveFetch(),
+      liveFetchImpl: (...args) => globalThis.fetch(...args),
       get onSessionExpired() {
         return sessionHooks.onSessionExpired;
       },

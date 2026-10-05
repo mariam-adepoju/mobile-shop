@@ -108,3 +108,10 @@ be exercised against `live` yet, and M2 onward is developed in
   `src/mocks` and the `mock` branch of `createApiClient` in `src/lib/api/instance.ts`.
   Fixtures are raw wire payloads and pass through the real envelope + Zod
   validation, so mock mode does not bypass the client.
+## 2026-10-05 - M5 cart API source contract
+
+Inspected the handlers and presenter in the web repository (`src/app/api/v1/cart/**` and `src/server/api/presenters.ts`). Per owner confirmation, production `GET /api/v1/cart` returns 401 without a bearer token. The handlers authenticate via `requireApiUser()` and pass the resolved local user id to the existing cart feature, which looks up the same `carts.userId` row used by the website.
+
+All four routes exist: `GET /cart`, `POST /cart/items`, `PATCH /cart/items/{productId}` and `DELETE /cart/items/{productId}`. Every success returns the full cart at `data.cart`, with `{ items, totalQuantity, subtotalMinor, currency }`. Each item has `productId`, `slug`, `name`, `brand`, `imageUrl`, `department`, `unitPriceMinor`, `quantity`, `lineTotalMinor`, `stock`, `maxPerOrder`, `requiresPrescription`, and `isActive`. Prices and totals are integer kobo; currency is `NGN`.
+
+POST accepts `{ productId, quantity }`, PATCH accepts `{ quantity }`, DELETE accepts no body. Stock and max-per-order are enforced on the server, with structured cart error codes. No cart mock is used by the M5 feature. ETag support was not found on the GET handler, so polling sends no conditional header.
