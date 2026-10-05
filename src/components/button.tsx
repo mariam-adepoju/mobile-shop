@@ -11,6 +11,7 @@ interface ButtonProps {
   disabled?: boolean;
   variant?: 'primary' | 'secondary';
   accessibilityHint?: string;
+  accessibilityLabel?: string;
 }
 
 /**
@@ -26,12 +27,14 @@ export function Button({
   disabled = false,
   variant = 'primary',
   accessibilityHint,
+  accessibilityLabel,
 }: ButtonProps) {
   const isDisabled = disabled || loading;
 
   return (
     <Pressable
       accessibilityHint={accessibilityHint}
+      accessibilityLabel={accessibilityLabel ?? label}
       accessibilityRole="button"
       accessibilityState={{ disabled: isDisabled, busy: loading }}
       disabled={isDisabled}

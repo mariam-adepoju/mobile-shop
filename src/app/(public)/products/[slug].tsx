@@ -1,9 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, usePathname } from 'expo-router';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { isPurchasable, productQueryOptions, type PharmacyAttributes } from '@/features/catalog';
+import { useAddToCart } from '@/features/cart';
+import { useAuthSession } from '@/features/auth';
 import {
   AppText,
   Button,
@@ -23,6 +25,9 @@ const BLOCKED_REASON: Record<string, string> = {
   inactive: 'This product is no longer available.',
 };
 export default function ProductDetailScreen() {
+  const pathname = usePathname();
+  const session = useAuthSession();
+  const addToCart = useAddToCart();
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const product = useQuery({ ...productQueryOptions(String(slug ?? '')), enabled: !!slug });
 
@@ -125,11 +130,23 @@ export default function ProductDetailScreen() {
         than faking a successful add.
       */}
       <View style={styles.footer}>
+        {addToCart.isSuccess ? <AppText accessibilityRole="alert" role="body">Added to your cart.</AppText> : null}
+        {addToCart.isError ? (
+          <View accessibilityRole="alert" style={styles.blocked}>
+            <AppText role="body">{addToCart.error.message}</AppText>
+          </View>
+        ) : null}
         <Button
-          disabled={!purchasable}
+          disabled={!purchasable || addToCart.isPending || session.status === 'restoring'}
+          loading={addToCart.isPending}
           label={purchasable ? 'Add to cart' : 'Unavailable'}
           onPress={() => {
-            // No-op until M5 wires the cart mutation.
+            if (session.status !== 'signed-in') {
+              session.requireSignIn(pathname);
+              router.replace('/sign-in');
+              return;
+            }
+            addToCart.mutate({ productId: item.id, quantity: 1 });
           }}
         />
         <DemoStoreNotice />
