@@ -32,7 +32,8 @@ function resolveScheme(): string {
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: 'Daywell',
-  slug: 'mobile-daywell',
+  slug: 'daywell-mobile',
+  owner: 'marrizons-team',
   version: '1.0.0',
   orientation: 'portrait',
   icon: './assets/images/icon.png',
@@ -40,6 +41,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   // token set yet, so the OS dark mode is deliberately not followed.
   userInterfaceStyle: 'light',
   scheme: resolveScheme(),
+  extra: {
+    ...config.extra,
+    eas: { projectId: '75d5c7f2-a6ac-4d07-b7e0-59b4308528d3' },
+  },
   ios: {
     ...config.ios,
     bundleIdentifier: BUNDLE_ID,
@@ -74,8 +79,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     // into the app never arrives and PKCE cannot complete. The SDK builds the
     // callback as `${bundleId}.auth0://<domain>/{ios|android}/${bundleId}/callback`,
     // so the plugin must stay in step with the URLs allowed in Auth0 (AGENTS.md 8).
-    'react-native-auth0',
+    [
+      'react-native-auth0',
+      { domain: process.env.EXPO_PUBLIC_AUTH0_DOMAIN ?? 'dev-3i3skll2b52f1j5t.us.auth0.com' },
+    ],
   ],
+
   experiments: {
     typedRoutes: true,
     // React Compiler is still experimental in SDK 57 and silently inserts
