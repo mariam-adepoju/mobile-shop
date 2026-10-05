@@ -13,15 +13,31 @@ export default function TabsLayout() {
   const { status } = useAuthSession();
   const cart = useCart({
     enabled: status === 'signed-in',
-    refetchInterval: CART_BADGE_POLL_INTERVAL_MS,
   });
   const refetchCart = cart.refetch;
   useEffect(() => {
     if (status !== 'signed-in') return undefined;
+    let timer: ReturnType<typeof setInterval> | undefined;
+    const stop = () => {
+      if (timer !== undefined) clearInterval(timer);
+      timer = undefined;
+    };
+    const start = () => {
+      stop();
+      if (AppState.currentState === 'active') {
+        timer = setInterval(() => { void refetchCart(); }, CART_BADGE_POLL_INTERVAL_MS);
+      }
+    };
     const subscription = AppState.addEventListener('change', (state) => {
-      if (state === 'active') void refetchCart();
+      if (state === 'active') {
+        void refetchCart();
+        start();
+      } else {
+        stop();
+      }
     });
-    return () => subscription.remove();
+    start();
+    return () => { subscription.remove(); stop(); };
   }, [refetchCart, status]);
   return (
     <Tabs
