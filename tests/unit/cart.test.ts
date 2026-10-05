@@ -11,6 +11,7 @@ import {
 } from '@/features/cart';
 import type { Cart } from '@/features/cart';
 import { removeCartItem, updateCartItem } from '@/features/cart/api';
+import { afterEach } from '@jest/globals';
 
 jest.mock('@/features/cart/api', () => ({
   updateCartItem: jest.fn(), removeCartItem: jest.fn(), fetchCart: jest.fn(), addCartItem: jest.fn(),
@@ -22,9 +23,17 @@ const line = {
   quantity: 2, lineTotalMinor: 300000, stock: 10, maxPerOrder: 5, requiresPrescription: false, isActive: true,
 } as const;
 const cart: Cart = { items: [line], totalQuantity: 2, subtotalMinor: 300000, currency: 'NGN' };
+const queryClients: QueryClient[] = [];
+
+function createQueryClient() {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false, gcTime: 0 } } });
+  queryClients.push(client);
+  return client;
+}
 
 describe('cart contract and cache updates', () => {
   beforeEach(() => jest.clearAllMocks());
+  afterEach(() => { queryClients.splice(0).forEach((client) => client.clear()); });
   it('parses the cart presenter shape and rejects the earlier guessed shape', () => {
     expect(CartEnvelopeDataSchema.safeParse({ cart }).success).toBe(true);
     expect(CartEnvelopeDataSchema.safeParse({ lines: [], itemCount: 0, subtotalMinor: 0, currency: 'NGN' }).success).toBe(false);
@@ -47,7 +56,7 @@ describe('cart contract and cache updates', () => {
   it('optimistically removes a line and rolls it back after failure', async () => {
     let rejectMutation: ((error: Error) => void) | undefined;
     jest.mocked(removeCartItem).mockImplementation(() => new Promise((_resolve, reject) => { rejectMutation = reject; }));
-    const queryClient = new QueryClient();
+    const queryClient = createQueryClient();
     queryClient.setQueryData(cartKey, cart);
     const mutation = queryClient.getMutationCache().build(queryClient, removeCartItemMutationOptions(queryClient));
     const execution = mutation.execute({ productId: line.productId });
@@ -62,7 +71,7 @@ describe('cart contract and cache updates', () => {
   it('replaces cache from the server and rolls quantity back after failure', async () => {
     let rejectMutation: ((error: Error) => void) | undefined;
     jest.mocked(updateCartItem).mockImplementation(() => new Promise((_resolve, reject) => { rejectMutation = reject; }));
-    const queryClient = new QueryClient();
+    const queryClient = createQueryClient();
     queryClient.setQueryData(cartKey, cart);
     const mutation = queryClient.getMutationCache().build(queryClient, updateCartItemMutationOptions(queryClient));
     const execution = mutation.execute({ productId: line.productId, quantity: 4 });
@@ -81,14 +90,14 @@ describe('cart contract and cache updates', () => {
   });
 
   it('replaces cache data with a complete mutation response', () => {
-    const queryClient = new QueryClient();
+    const queryClient = createQueryClient();
     const fresh: Cart = { ...cart, totalQuantity: 3, subtotalMinor: 450000, items: [{ ...line, quantity: 3, lineTotalMinor: 450000 }] };
     setCartFromServer(queryClient, fresh);
     expect(queryClient.getQueryData(cartKey)).toEqual(fresh);
   });
 
   it('preserves the last successful cart when a refetch fails', async () => {
-    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const queryClient = createQueryClient();
     queryClient.setQueryData(cartKey, cart);
     await expect(queryClient.fetchQuery({ queryKey: cartKey, queryFn: async () => { throw new Error('offline'); } })).rejects.toThrow('offline');
     expect(queryClient.getQueryData(cartKey)).toEqual(cart);
