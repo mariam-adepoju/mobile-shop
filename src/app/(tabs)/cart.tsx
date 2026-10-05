@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, AppState, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
 import { AppText, Button, DemoStoreNotice, PriceText, Screen } from '@/components';
+import { RequireAuth } from '@/components/require-auth';
 import { shouldPollCart, useCart, useRemoveCartItem, useUpdateCartItem } from '@/features/cart';
 import { ApiError } from '@/lib/api';
 import { CART_POLL_INTERVAL_MS, getConfig } from '@/lib/config';
@@ -13,6 +14,10 @@ const IMAGE_ORIGIN = getConfig().apiBaseUrl.replace(/\/api\/v1\/?$/, '');
 const imageUri = (url: string | null) => url === null ? null : /^https?:\/\//i.test(url) ? url : `${IMAGE_ORIGIN}/${url.replace(/^\/+/, '')}`;
 
 export default function CartRoute() {
+  return <RequireAuth><CartScreen /></RequireAuth>;
+}
+
+function CartScreen() {
   const cart = useCart();
   const refetchCart = cart.refetch;
   const update = useUpdateCartItem();

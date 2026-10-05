@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
+import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
 import { AppText, Button, DemoStoreNotice, SkeletonList } from '@/components';
-import { RequireAuth } from '@/components/require-auth';
 import { meQueryOptions } from '@/features/account';
 import { useAuthSession } from '@/features/auth';
 import { ApiError, messageForErrorCode } from '@/lib/api';
@@ -16,10 +16,31 @@ import { colors, spacing } from '@/theme';
  * email here is the graded-core proof that both clients share one identity.
  */
 export default function AccountScreen() {
+  const { status, requireSignIn } = useAuthSession();
+
+  if (status === 'restoring') {
+    return <View style={styles.content}><SkeletonList rows={2} testID="account-loading" /></View>;
+  }
+
+  if (status === 'signed-out') {
+    return (
+      <View style={styles.content} testID="account-signed-out">
+        <AppText accessibilityRole="header" role="heading" weight="bold">Your account</AppText>
+        <AppText role="body">Sign in with your Google account to view your profile and shared cart.</AppText>
+        <Button
+          label="Sign in with Google"
+          onPress={() => {
+            requireSignIn('/account');
+            router.push('/sign-in');
+          }}
+        />
+        <DemoStoreNotice />
+      </View>
+    );
+  }
+
   return (
-    <RequireAuth>
-      <AccountProfile />
-    </RequireAuth>
+    <AccountProfile />
   );
 }
 

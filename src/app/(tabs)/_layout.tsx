@@ -58,13 +58,19 @@ export default function TabsLayout() {
         sceneStyle: { backgroundColor: background },
       }}
     >
-      <Tabs.Screen name="index" options={{ title: 'Shop', tabBarLabel: ({ color }) => <AppText role="caption" color={color}>Shop</AppText> }} />
+      <Tabs.Screen name="index" options={{ title: 'Home', tabBarLabel: ({ color }) => <AppText role="caption" color={color}>Home</AppText> }} />
+      <Tabs.Screen name="shop/[[department]]" options={{
+        title: 'Shop',
+        href: '/shop',
+        tabBarLabel: ({ color }) => <AppText role="caption" color={color}>Shop</AppText>,
+      }} />
+      <Tabs.Screen name="products/[slug]" options={{ href: null, title: 'Product' }} />
       <Tabs.Screen name="cart" options={{
         title: 'Cart',
         tabBarBadge: (cart.data?.totalQuantity ?? 0) > 0 ? cart.data?.totalQuantity : undefined,
         tabBarLabel: ({ color }) => <AppText role="caption" color={color}>Cart</AppText>,
       }} />
-      <Tabs.Screen name="orders" options={{ title: 'Orders', tabBarLabel: ({ color }) => <AppText role="caption" color={color}>Orders</AppText> }} />
+      <Tabs.Screen name="orders" options={{ href: null }} />
       <Tabs.Screen name="account" options={{ title: 'Account', tabBarLabel: ({ color }) => <AppText role="caption" color={color}>Account</AppText> }} />
     </Tabs>
   );

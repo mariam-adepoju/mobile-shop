@@ -40,9 +40,8 @@ export default function RootLayout() {
               headerBackButtonDisplayMode: 'minimal',
             }}
           >
-            <Stack.Screen name="(public)" options={{ headerShown: false }} />
-            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
           </Stack>
         </SafeAreaProvider>
       </AuthSessionProvider>
