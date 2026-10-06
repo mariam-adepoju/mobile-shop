@@ -1,5 +1,6 @@
-import { Tabs } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useNetworkState } from 'expo-network';
+import { Tabs } from 'expo-router';
 import { useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
 
@@ -58,20 +59,29 @@ export default function TabsLayout() {
         sceneStyle: { backgroundColor: background },
       }}
     >
-      <Tabs.Screen name="index" options={{ title: 'Home', tabBarLabel: ({ color }) => <AppText role="caption" color={color}>Home</AppText> }} />
-      <Tabs.Screen name="shop/[[department]]" options={{
+      <Tabs.Screen name="index" options={{
+        title: 'Home',
+        tabBarIcon: ({ color, size }) => <Ionicons name="home-outline" color={color} size={size} />,
+        tabBarLabel: ({ color }) => <AppText role="caption" color={color}>Home</AppText>
+      }} />
+      <Tabs.Screen name="shop/index" options={{
         title: 'Shop',
-        href: '/shop',
+        tabBarIcon: ({ color, size }) => <Ionicons name="storefront-outline" color={color} size={size} />,
         tabBarLabel: ({ color }) => <AppText role="caption" color={color}>Shop</AppText>,
       }} />
-      <Tabs.Screen name="products/[slug]" options={{ href: null, title: 'Product' }} />
+      <Tabs.Screen name="shop/[department]" options={{ href: null, title: 'Shop' }} />
       <Tabs.Screen name="cart" options={{
         title: 'Cart',
+        tabBarIcon: ({ color, size }) => <Ionicons name="cart-outline" color={color} size={size} />,
         tabBarBadge: (cart.data?.totalQuantity ?? 0) > 0 ? cart.data?.totalQuantity : undefined,
         tabBarLabel: ({ color }) => <AppText role="caption" color={color}>Cart</AppText>,
       }} />
       <Tabs.Screen name="orders" options={{ href: null }} />
-      <Tabs.Screen name="account" options={{ title: 'Account', tabBarLabel: ({ color }) => <AppText role="caption" color={color}>Account</AppText> }} />
+      <Tabs.Screen name="account" options={{
+        title: 'Account',
+        tabBarIcon: ({ color, size }) => <Ionicons name="person-outline" color={color} size={size} />,
+        tabBarLabel: ({ color }) => <AppText role="caption" color={color}>Account</AppText>,
+      }} />
     </Tabs>
   );
 }

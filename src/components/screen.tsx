@@ -1,4 +1,5 @@
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText, textStyles } from '@/components/text';
 import { background, colors, spacing } from '@/theme';
@@ -7,15 +8,15 @@ interface ScreenProps {
   children: React.ReactNode;
   title?: string;
   subtitle?: string;
-  /** Renders a pull-to-refresh control. */
   onRefresh?: () => void;
   refreshing?: boolean;
 }
 
 /** Page shell: off-white canvas, title block, and optional pull-to-refresh. */
 export function Screen({ children, title, subtitle, onRefresh, refreshing = false }: ScreenProps) {
+  const insets = useSafeAreaInsets();
   const body = (
-    <View style={styles.content}>
+    <View style={[styles.content, { paddingTop: insets.top + spacing.four }]}>
       {title ? (
         <AppText
           accessibilityRole="header"
