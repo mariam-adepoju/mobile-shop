@@ -89,3 +89,5 @@ skills-lock.json
 # never edited by hand (AGENTS.md 4).
 /ios
 /android
+ci-out.txt
+verify-out.txt
