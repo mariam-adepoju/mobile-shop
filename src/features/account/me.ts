@@ -20,10 +20,22 @@ export const MeSchema = z.object({
   email: z.string().email(),
   name: z.string().min(1),
   phone: z.string().nullish(),
-  auth0Sub: z.string().min(1),
+  auth0Sub: z.string().min(1).optional(),
 });
 
 export type Me = z.infer<typeof MeSchema>;
+
+/** What `GET /api/v1/me` actually returns inside `data` (see the backend route). */
+const MeResponseSchema = z.object({
+  user: z.object({
+    id: z.string().min(1),
+    fullName: z.string().nullish(),
+    email: z.string().min(1),
+    emailVerified: z.boolean().optional(),
+    phone: z.string().nullish(),
+    avatarUrl: z.string().nullish(),
+  }),
+});
 
 /** The single query key for the current user's profile. */
 export const meKey = ['me'] as const;
@@ -36,8 +48,12 @@ export const meKey = ['me'] as const;
  */
 export function fetchMe(signal?: AbortSignal): Promise<Me> {
   return getApiClient()
-    .get('/me', MeSchema, { auth: true, signal })
-    .then((r) => r.data);
+    .get('/me', MeResponseSchema, { auth: true, signal })
+    .then(({ data }) => {
+      const { user } = data;
+      const name = user.fullName && user.fullName.length > 0 ? user.fullName : user.email;
+      return { id: user.id, email: user.email, name, phone: user.phone ?? null };
+    });
 }
 
 export function meQueryOptions() {
