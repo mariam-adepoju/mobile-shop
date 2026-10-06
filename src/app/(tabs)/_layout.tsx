@@ -70,6 +70,7 @@ export default function TabsLayout() {
         tabBarLabel: ({ color }) => <AppText role="caption" color={color}>Shop</AppText>,
       }} />
       <Tabs.Screen name="shop/[department]" options={{ href: null, title: 'Shop' }} />
+      <Tabs.Screen name="products/[slug]" options={{ href: null, title: 'Product' }} />
       <Tabs.Screen name="cart" options={{
         title: 'Cart',
         tabBarIcon: ({ color, size }) => <Ionicons name="cart-outline" color={color} size={size} />,
